@@ -1,32 +1,39 @@
-from paddleocr import PaddleOCR
-import re
-from engine.preprocessing import preprocess_image
+import cv2
+import pytesseract
 
-ocr = PaddleOCR(lang='en')
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+
+def preprocess(image_path):
+
+    img = cv2.imread(image_path)
+
+    img = cv2.resize(img, None, fx=2, fy=2)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    blur = cv2.GaussianBlur(gray, (5,5), 0)
+
+    thresh = cv2.adaptiveThreshold(
+        blur,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        31,
+        2
+    )
+
+    return thresh
+
 
 def extract_text(image_path):
 
-    processed = preprocess_image(image_path)
+    img = preprocess(image_path)
 
-    results = ocr.ocr(processed)
+    text = pytesseract.image_to_string(
+        img,
+        lang="eng",
+        config="--psm 6"
+    )
 
-    words = []
-
-    if results:
-        for line in results:
-            for word in line:
-                words.append(word[1][0])
-
-    text = " ".join(words)
-
-    # -------- TEXT CLEANING --------
-    text = text.lower()
-    text = re.sub(r'[^a-z\s]', ' ', text)
-
-    words = text.split()
-    words = [w for w in words if len(w) > 2]
-
-    cleaned_text = " ".join(words)
-    # --------------------------------
-
-    return cleaned_text
+    return text

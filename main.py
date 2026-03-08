@@ -1,6 +1,6 @@
 import os
 from engine.custom_ocr import extract_text
-from engine.similarity import compute_similarity   # ADD THIS
+from engine.similarity import compute_similarity
 
 input_folder = "data/raw"
 output_folder = "data/extracted"
@@ -18,8 +18,9 @@ for file in os.listdir(input_folder):
         with open(os.path.join(output_folder, output_file), "w", encoding="utf-8") as f:
             f.write(text)
 
-        print(f"Processed: {file}")
+        print("Processed:", file)
 
-# ---- ADD THIS PART ----
+
 print("\nSimilarity Results:\n")
+
 compute_similarity(output_folder)

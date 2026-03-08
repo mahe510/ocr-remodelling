@@ -1,28 +1,62 @@
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 import os
+import re
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
 
-def compute_similarity(folder):
+def clean_text(text):
+    text = text.lower()
+    text = re.sub(r'[^a-z\s]', ' ', text)
+    text = re.sub(r'\s+', ' ', text)
+    return text
 
-    docs = []
-    names = []
+
+def load_documents(folder):
+
+    documents = []
+    filenames = []
 
     for file in os.listdir(folder):
 
         if file.endswith(".txt"):
 
-            with open(os.path.join(folder,file),"r",encoding="utf-8") as f:
-                docs.append(f.read())
+            path = os.path.join(folder, file)
 
-            names.append(file)
+            with open(path, "r", encoding="utf-8") as f:
 
-    embeddings = model.encode(docs)
+                text = f.read()
 
-    sim = cosine_similarity(embeddings)
+                text = clean_text(text)
 
-    for i in range(len(names)):
-        for j in range(i+1,len(names)):
+                documents.append(text)
 
-            print(f"{names[i]} vs {names[j]} -> {sim[i][j]*100:.2f}% similarity")
+            filenames.append(file)
+
+    return documents, filenames
+
+
+def compute_similarity(folder):
+
+    docs, names = load_documents(folder)
+
+    # character based similarity (handles OCR mistakes)
+    vectorizer = TfidfVectorizer(
+        analyzer="char",
+        ngram_range=(3,5)
+    )
+
+    tfidf_matrix = vectorizer.fit_transform(docs)
+
+    similarity_matrix = cosine_similarity(tfidf_matrix)
+
+    df = pd.DataFrame(
+        similarity_matrix,
+        index=names,
+        columns=names
+    )
+
+    print("\nSimilarity Matrix:\n")
+    print(df.round(2) * 100)
+
+    return df
